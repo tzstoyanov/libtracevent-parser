@@ -1,0 +1,37 @@
+This directory contains modified version of libtraceevent. It uses flex/bison 
+parser for parsing /sys/kernel/debug/tracing/events/*/format files. The purpose 
+of this project is to compare output of the legacy parser and the new one, for 
+ debugging purposes. The work is in progress, the new parser is not completed yet.
+ 
+ Building:
+------------------------------------------------------------
+1. To build the modified library and the test application, just do:
+	make
+ the output files are  libtraceevent.so, libtraceevent.a, test-event-parse-format 
+ and all plugin shared objects.
+
+2. To clean the compiled object, do:
+	make cleawn
+ 
+Testing the parser (reading format files requires root privileges):
+------------------------------------------------------------
+1. Run the test application with parameter format file:
+ 	./test-event-parse-format <event_format_file>
+ exanmple:
+ 	./test-event-parse-format /sys/kernel/debug/tracing/events/kmem/kmalloc_node/format	
+
+ 	
+Test the parser with all format files in the system. Use the script 
+test-event-parser.sh (reading format files requires root privileges):	
+------------------------------------------------------------
+1. Run the test script with parameter test application:
+	./test-event-parser.sh ./test-event-parse-format
+ The script runs the application with all format files, found in the system.
+ The application parses the input file using legacy and new parser algorithms 
+ and compares both outputs. If there is a difference, an error is returned.
+ 
+ 2. Test script tune parameters. On the top of the script, there are few variables:
+ 	2.1 BREAK_ON_ERROR (0 by default) - if set, stops the format files parsing
+ 					    on the first parsing error
+ 	2.2 VERBOSE_ON_ERROR (0 by default)- if set, prints a lot of parsing details
+ 					     on the console, in case error is detected	
