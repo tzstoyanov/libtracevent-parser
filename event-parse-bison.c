@@ -413,15 +413,22 @@ void parse_strfunc_print_param(struct tep_format_parser_context *context, char *
 }
 
 #define REC_PREFIX	"REC->"
-void parse_field_print_param(struct tep_format_parser_context *context, char *param)
+static bool strip_rec_prefix(char *param)
 {
-	parse_new_print_param(context, TEP_PRINT_FIELD);
-
 	if (!strncmp(REC_PREFIX, param, strlen(REC_PREFIX))) {
 		memmove(param, param+strlen(REC_PREFIX),
 			strlen(param)-strlen(REC_PREFIX));
 		param[strlen(param)-strlen(REC_PREFIX)] = '\0';
+		return true;
 	}
+	return false;
+}
+void parse_field_print_param(struct tep_format_parser_context *context, char *param)
+{
+	parse_new_print_param(context, TEP_PRINT_FIELD);
+
+	strip_rec_prefix(param);
+
 	if (context->current_arg->field.name) {
 		context->current_arg->field.name =
 			realloc(context->current_arg->field.name,
@@ -440,7 +447,6 @@ void parse_atom_print_param(struct tep_format_parser_context *context, char *par
 {
 	int len=0;
 	char *quote, *tmp;
-	parse_new_print_param(context, TEP_PRINT_ATOM);
 
 	/* remove quotes from the atom */
 	quote = strstr(param, "\"");
@@ -455,6 +461,15 @@ void parse_atom_print_param(struct tep_format_parser_context *context, char *par
 		}
 		memmove(param, quote+1, len+1);
 	}
+
+	if (context->stack && context->stack->arg &&
+	   TEP_PRINT_FLAGS == context->stack->arg->type &&
+	   NULL == context->stack->arg->flags.delim) {
+		context->stack->arg->flags.delim = param;
+		return;
+	}
+
+	parse_new_print_param(context, TEP_PRINT_ATOM);
 
 	if (context->current_arg->field.name) {
 		context->current_arg->field.name =
@@ -471,11 +486,11 @@ void parse_atom_print_param(struct tep_format_parser_context *context, char *par
 
 void parse_op_print_param(struct tep_format_parser_context *context, char *param)
 {
-	if (context->stack && context->stack->arg &&
-	   TEP_PRINT_FLAGS == context->stack->arg->type &&
-	   NULL == context->stack->arg->flags.delim) {
-		context->stack->arg->flags.delim = param;
-		return;
+	if(context->current_arg && context->current_arg->type == TEP_PRINT_TYPE)
+	{
+		context->current_arg->field.name = context->current_arg->typecast.type;
+		strip_rec_prefix(context->current_arg->field.name);
+		context->current_arg->type = TEP_PRINT_FIELD;
 	}
 
 	parse_new_print_param(context, TEP_PRINT_OP);
