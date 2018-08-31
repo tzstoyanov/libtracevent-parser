@@ -88,12 +88,22 @@ struct tep_handle {
 	char *trace_clock;
 };
 
+struct tep_format_parser_stack {
+	struct tep_format_parser_stack *next;
+	struct tep_print_arg *arg;
+	struct tep_print_arg **args;
+};
+
 struct tep_format_parser_context {
 	int line_num;
 	int blank_line;
 	int bracket_count;
 	struct tep_event_format *parsed;
 	struct tep_print_arg **args;
+	struct tep_format_parser_stack *stack;
+	struct tep_print_arg *current_arg;
+	struct tep_print_flag_sym **flags;
+	int	arg_completed;
 	struct tep_format_field **current_fields;
 };
 
@@ -120,5 +130,8 @@ struct tep_function_handler {
 	int				nr_args;
 };
 
-
+void parser_debug(const char *format, ...);
+int count_parsed_fields(struct tep_format_field *fields);
+void parse_new_print_param(struct tep_format_parser_context *context,
+			   enum tep_print_arg_type type);
 #endif /* _PARSE_EVENTS_INT_H */

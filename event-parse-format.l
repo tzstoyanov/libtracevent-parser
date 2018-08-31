@@ -63,31 +63,87 @@ format\:			{ BEGIN(FORMAT_START); return FORMAT; }
 				 }
 				}
 <PRINT_PARAMS,PRINT_PARAMS_FUNC>,[ \t]*	{ return STRING_PARAM_NEW; }
-<PRINT_PARAMS>[a-zA-Z0-9\_\-]+\( { 
-				  yylval.sval = strdup(yytext); 
+<PRINT_PARAMS>__print_flags\( 	{ 
 				  context->bracket_count=1;
 				  BEGIN(PRINT_PARAMS_FUNC);  
-				  return PARAM_ARG_FUNC; 
+				  return PARAM_FLAGS_FUNC; 
 				 }
+<PRINT_PARAMS>__get_str\( 	{
+				  context->bracket_count=1;
+				  BEGIN(PRINT_PARAMS_FUNC);  
+				  return PARAM_STR_FUNC; 
+				 }
+<PRINT_PARAMS>__print_symbolic\( {
+				  context->bracket_count=1;
+				  BEGIN(PRINT_PARAMS_FUNC);  
+				  return PARAM_SYMB_FUNC; 
+				 }
+<PRINT_PARAMS>__print_hex\( 	{
+				  context->bracket_count=1;
+				  BEGIN(PRINT_PARAMS_FUNC);  
+				  return PARAM_HEX_FUNC; 
+				 }
+<PRINT_PARAMS>__print_hex_str\( {
+				  context->bracket_count=1;
+				  BEGIN(PRINT_PARAMS_FUNC);  
+				  return PARAM_HEXSTR_FUNC; 
+				 }
+<PRINT_PARAMS>__print_array\( 	{
+				  context->bracket_count=1;
+				  BEGIN(PRINT_PARAMS_FUNC);  
+				  return PARAM_ARRAY_FUNC; 
+				 }
+<PRINT_PARAMS>__get_bitmask\( 	{
+				  context->bracket_count=1;
+				  BEGIN(PRINT_PARAMS_FUNC);  
+				  return PARAM_BITMASK_FUNC; 
+				 }
+<PRINT_PARAMS>__get_dynamic_array\( {
+				  context->bracket_count=1;
+				  BEGIN(PRINT_PARAMS_FUNC);  
+				  return PARAM_DARRAY_FUNC; 
+				 }
+<PRINT_PARAMS>__get_dynamic_array_len		{
+				  context->bracket_count=1;
+				  BEGIN(PRINT_PARAMS_FUNC);  
+				  return PARAM_DARRAYLEN_FUNC; 
+				 }
+				 
+<PRINT_PARAMS>[a-zA-Z0-9\_\-]+\( { 
+				    yylval.sval = strdup(yytext); 
+				    context->bracket_count=1;
+				    BEGIN(PRINT_PARAMS_FUNC);  
+				    return PARAM_ARG_FUNC; 
+				  }
 <PRINT_PARAMS>\(		{ 
 				 yylval.sval = strdup(yytext); 
 				 return STRING_PARAM; 
 				}
-<PRINT_PARAMS_FUNC>\{		{ BEGIN(PRINT_PARAMS_FUNC_CURLY);}
+<PRINT_PARAMS_FUNC>\{		{ 
+					BEGIN(PRINT_PARAMS_FUNC_CURLY); 
+					return  PRINT_PARAMS_FUNC_CURLY_START;
+				}
 <PRINT_PARAMS,PRINT_PARAMS_FUNC>REC\-\>[a-zA-Z0-9\_\-]+ {
 					yylval.sval = strdup(yytext);
-					return STRING_PARAM_REC;
+					return STRING_PARAM;
 				}
 <PRINT_PARAMS_FUNC_CURLY>[^,^\}]+ {
 				   yylval.sval = strdup(yytext); 
 				   return STRING_PARAM;
 				 }
-<PRINT_PARAMS_FUNC_CURLY>\}	{ BEGIN(PRINT_PARAMS_FUNC);}
+<PRINT_PARAMS_FUNC_CURLY>\}	{ 
+					BEGIN(PRINT_PARAMS_FUNC);
+					return  PRINT_PARAMS_FUNC_CURLY_END;
+				}
 <PRINT_STRING>[^"]*		{ 
 				 yylval.sval = strdup(yytext); 
 				 return STRING_PRINT; 
 				}
-<PRINT_PARAMS,PRINT_PARAMS_FUNC>[^,^\n^\r^\(^\)^ ^\t^-^+^\/^&^<^>^=^!^|^?^:^"]* { 
+<PRINT_PARAMS,PRINT_PARAMS_FUNC>\"[^"]*\" { 
+				      yylval.sval = strdup(yytext); 
+				      return STRING_PARAM_ATOM; 
+				     }
+<PRINT_PARAMS,PRINT_PARAMS_FUNC>[^,^\n^\r^\(^\)^ ^\t^-^+^\/^&^<^>^=^!^|^?^:]* { 
 				      yylval.sval = strdup(yytext); 
 				      return STRING_PARAM; 
 				     }
@@ -95,5 +151,6 @@ format\:			{ BEGIN(FORMAT_START); return FORMAT; }
 					yylval.sval = strdup(yytext); 
 					return STRING_PARAM_OP; 
 				}
-
+				
+<<EOF>>				{ static int end=0; if(!end++) return FILE_END; yyterminate();}
 %%

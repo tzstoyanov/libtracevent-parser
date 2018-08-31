@@ -34,4 +34,5 @@ test-event-parser.sh (reading format files requires root privileges):
  	2.1 BREAK_ON_ERROR (0 by default) - if set, stops the format files parsing
  					    on the first parsing error
  	2.2 VERBOSE_ON_ERROR (0 by default)- if set, prints a lot of parsing details
- 					     on the console, in case error is detected	
+ 					     on the console, in case error is detected
+	

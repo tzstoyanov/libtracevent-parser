@@ -1,4 +1,5 @@
 libtraceevent-y += event-parse.o
+libtraceevent-y += event-parse-bison.o
 libtraceevent-y += event-plugin.o
 libtraceevent-y += trace-seq.o
 libtraceevent-y += parse-filter.o

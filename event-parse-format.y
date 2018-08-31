@@ -8,6 +8,16 @@ void parse_new_field(struct tep_format_parser_context *context, char *field_stri
 void parse_set_field_signed(struct tep_format_parser_context *context, int is_signed);
 void parse_new_print_str(struct tep_format_parser_context *context, char *field_string);
 void parser_debug(const char *format, ...);
+void parse_field_print_param(struct tep_format_parser_context *context, char *param);
+void parse_op_print_param(struct tep_format_parser_context *context, char *param);
+void parse_flags_print_param(struct tep_format_parser_context *context);
+void parse_print_stack_pop(struct tep_format_parser_context *context);
+void parse_flag_print_param(struct tep_format_parser_context *context,
+			    char *value, char *name);
+void parse_func_end_param(struct tep_format_parser_context *context);
+void parse_func_end_file(struct tep_format_parser_context *context);
+void parse_atom_print_param(struct tep_format_parser_context *context, char *param);
+
 %}
 %define parse.error verbose
 %parse-param {struct tep_format_parser_context *context}
@@ -27,15 +37,20 @@ void parser_debug(const char *format, ...);
 %token <sval> STRING_PRINT
 %token <sval> STRING_PARAM
 %token <sval> PARAM_ARG_FUNC
-%token <sval> STRING_PARAM_REC
 %token <sval> STRING_PARAM_OP
+%token <sval> STRING_PARAM_ATOM
 %token EVENT_NAME EVENT_ID FORMAT
 %token FIELD FIELD_OFFSET FIELD_SIZE FIELD_SIGNED
 %token PRINT_FMT COMMA DQUOTE
 %token SEMICOLON ENDL 
 %token PRINT_STRING_START PRINT_PARAM_START
 %token PARAM_FUNC_END STRING_PARAM_NEW
-
+%token PRINT_PARAMS_FUNC_CURLY_START
+%token PRINT_PARAMS_FUNC_CURLY_END
+%token PARAM_STR_FUNC PARAM_SYMB_FUNC PARAM_HEX_FUNC PARAM_HEXSTR_FUNC
+%token PARAM_FLAGS_FUNC PARAM_ARRAY_FUNC PARAM_BITMASK_FUNC 
+%token PARAM_DARRAY_FUNC PARAM_DARRAYLEN_FUNC
+%token FILE_END
 %%
 event:
 	name id format fields prints
@@ -92,17 +107,74 @@ prints:
 	;
 print:
 	PRINT_FMT PRINT_STRING_START
-	| PRINT_PARAM_START 
-	| PARAM_ARG_FUNC { parser_debug(" Got param func [%s] \n", $1);}
-	| STRING_PARAM_REC { parser_debug(" Got param REC [%s]\n", $1);}
-	| STRING_PARAM_OP {parser_debug(" Got param OP [%s]\n", $1);}
+	| PRINT_PARAM_START
+	| PRINT_PARAMS_FUNC_CURLY_START 
+	  STRING_PARAM STRING_PARAM 
+	  PRINT_PARAMS_FUNC_CURLY_END {
+	  				parser_debug("Got curly pair [%s],[%s]\n", 
+	  					     $2, $3);
+	  				parse_flag_print_param(context, $2, $3);
+	  			      } 
+	| PARAM_ARG_FUNC { 
+				parser_debug(" Got param func [%s] \n", $1);
+			 }
+	| PARAM_FLAGS_FUNC { 
+				parser_debug(" Got param flags func \n");
+				parse_flags_print_param(context);
+			   }
+	| PARAM_STR_FUNC {
+				parser_debug(" Got param string func \n");
+			 }
+	| PARAM_SYMB_FUNC {
+				parser_debug(" Got param symbolic func \n");
+			 }
+	| PARAM_HEX_FUNC {
+				parser_debug(" Got param hex func \n");
+			 }
+	| PARAM_HEXSTR_FUNC {
+				parser_debug(" Got param hex string func \n");
+			 }
+	| PARAM_ARRAY_FUNC {
+				parser_debug(" Got param array func \n");
+			 }
+	| PARAM_BITMASK_FUNC {
+				parser_debug(" Got param bitmask func \n");
+			 }
+	| PARAM_DARRAY_FUNC {
+				parser_debug(" Got param dynamic array func \n");
+			 }
+	| PARAM_DARRAYLEN_FUNC {
+				parser_debug(" Got param dynamic array func \n");
+			 }
+	| STRING_PARAM_OP {
+				parser_debug(" Got param OP [%s]\n", $1);
+				parse_op_print_param(context, $1);
+			  }
 	| STRING_PRINT { 
-		parser_debug("Got print string: [%s]\n", $1); 
-		parse_new_print_str(context, $1); }		
-	| STRING_PARAM { parser_debug("Got print param: [%s]\n", $1); }
-	| STRING_PARAM_NEW { parser_debug (" param NEW\n"); }
-	| PARAM_FUNC_END { parser_debug("Func END\n"); }
-	| ENDL { parser_debug("\n"); }	
+				parser_debug("Got print string: [%s]\n", $1); 
+				parse_new_print_str(context, $1); 
+		       }
+	| STRING_PARAM { 
+				parser_debug("Got print param: [%s]\n", $1); 
+				parse_field_print_param(context, $1);
+			}
+	| STRING_PARAM_ATOM { 
+				parser_debug("Got ATOM string: [%s]\n", $1); 
+				parse_atom_print_param(context, $1); 
+		       }			
+	| STRING_PARAM_NEW { 
+			   	context->arg_completed=1;	
+			   	parser_debug (" param NEW\n"); 
+			   }
+	| PARAM_FUNC_END { 
+				parser_debug("Func END\n");
+				parse_func_end_param(context); 
+			}
+	| ENDL { parser_debug("\n"); }
+	| FILE_END { 
+			parser_debug("Got EOF\n");
+			parse_func_end_file(context); 
+		   }
 	;
 %%
 
