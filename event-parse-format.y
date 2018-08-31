@@ -10,13 +10,15 @@ void parse_new_print_str(struct tep_format_parser_context *context, char *field_
 void parser_debug(const char *format, ...);
 void parse_field_print_param(struct tep_format_parser_context *context, char *param);
 void parse_op_print_param(struct tep_format_parser_context *context, char *param);
-void parse_flags_print_param(struct tep_format_parser_context *context);
 void parse_print_stack_pop(struct tep_format_parser_context *context);
 void parse_flag_print_param(struct tep_format_parser_context *context,
 			    char *value, char *name);
 void parse_func_end_param(struct tep_format_parser_context *context);
 void parse_func_end_file(struct tep_format_parser_context *context);
 void parse_atom_print_param(struct tep_format_parser_context *context, char *param);
+void parse_flags_print_param(struct tep_format_parser_context *context);
+void parse_symbol_print_param(struct tep_format_parser_context *context);
+
 
 %}
 %define parse.error verbose
@@ -127,6 +129,7 @@ print:
 			 }
 	| PARAM_SYMB_FUNC {
 				parser_debug(" Got param symbolic func \n");
+				parse_symbol_print_param(context);
 			 }
 	| PARAM_HEX_FUNC {
 				parser_debug(" Got param hex func \n");

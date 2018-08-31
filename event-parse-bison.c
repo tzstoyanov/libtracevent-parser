@@ -263,6 +263,26 @@ struct tep_print_arg *parse_print_stack_try_pop(struct tep_format_parser_context
 				}
 			}
 			break;
+		case TEP_PRINT_FLAGS:
+			if (context->stack->arg->flags.field) {
+				arg = parse_print_stack_pop(context);
+				if(arg) {
+					*context->args = context->current_arg;
+					context->args = &context->current_arg->next;
+					context->current_arg = arg_current;
+				}
+			}
+			break;
+		case TEP_PRINT_SYMBOL:
+			if (context->stack->arg->symbol.field) {
+				arg = parse_print_stack_pop(context);
+				if(arg) {
+					*context->args = context->current_arg;
+					context->args = &context->current_arg->next;
+					context->current_arg = arg_current;
+				}
+			}
+			break;
 		default:
 			break;
 		}
@@ -283,28 +303,38 @@ void parse_print_stack_push(struct tep_format_parser_context *context, struct te
 
 void parse_print_getnext_arg(struct tep_format_parser_context *context)
 {
+	bool pushed = false;
+
 	while(parse_print_stack_try_pop(context));
 
 	if (context->current_arg) {
 		switch (context->current_arg->type) {
 		case TEP_PRINT_OP:
 			if(!context->current_arg->op.right) {
+				pushed = true;
 				parse_print_stack_push(context, context->current_arg);
 				context->args = &context->current_arg->op.right;
-			} else {
-				*context->args = context->current_arg;
-				context->args = &context->current_arg->next;
+			}			break;
+		case TEP_PRINT_FLAGS:
+			if(!context->current_arg->flags.field) {
+				pushed = true;
+				parse_print_stack_push(context, context->current_arg);
+				context->args = &context->current_arg->flags.field;
 			}
 			break;
-		case TEP_PRINT_FLAGS:
-			parse_print_stack_push(context, context->current_arg);
-			context->args = &context->current_arg->flags.field;
-			context->flags = &context->current_arg->flags.flags;
+		case TEP_PRINT_SYMBOL:
+			if(!context->current_arg->symbol.field) {
+				pushed = true;
+				parse_print_stack_push(context, context->current_arg);
+				context->args = &context->current_arg->symbol.field;
+			}
 			break;
 		default:
+			break;
+		}
+		if(!pushed) {
 			*context->args = context->current_arg;
 			context->args = &context->current_arg->next;
-			break;
 		}
 	}
 }
@@ -360,6 +390,16 @@ void parse_flags_print_param(struct tep_format_parser_context *context)
 
 	flags = context->current_arg;
 	context->flags = &flags->flags.flags;
+}
+
+void parse_symbol_print_param(struct tep_format_parser_context *context)
+{
+	struct tep_print_arg *flags;
+
+	parse_new_print_param(context, TEP_PRINT_SYMBOL);
+
+	flags = context->current_arg;
+	context->flags = &flags->symbol.symbols;
 }
 
 #define REC_PREFIX	"REC->"

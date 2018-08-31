@@ -8,10 +8,10 @@ of this project is to compare output of the legacy parser and the new one, for
 1. To build the modified library and the test application, just do:
 	make
  the output files are  libtraceevent.so, libtraceevent.a, test-event-parse-format 
- and all plugin shared objects.
+ and all plugins shared objects.
 
 2. To clean the compiled object, do:
-	make cleawn
+	make clean
  
 Testing the parser (reading format files requires root privileges):
 ------------------------------------------------------------
