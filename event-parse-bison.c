@@ -406,6 +406,12 @@ void parse_typecast_print_param(struct tep_format_parser_context *context, char 
 	context->current_arg->typecast.type = type;
 }
 
+void parse_strfunc_print_param(struct tep_format_parser_context *context, char *string)
+{
+	parse_new_print_param(context, TEP_PRINT_STRING);
+	context->current_arg->string.string = string;
+}
+
 #define REC_PREFIX	"REC->"
 void parse_field_print_param(struct tep_format_parser_context *context, char *param)
 {

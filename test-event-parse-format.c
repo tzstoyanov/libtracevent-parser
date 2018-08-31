@@ -288,7 +288,7 @@ void events_print_fmt_arg(char *indent, struct tep_print_arg *arg)
 		break;
 	case TEP_PRINT_STRING:
 	case TEP_PRINT_BSTRING:
-		printf("\n%sString %d (offset %d):", indent2, arg->type,
+		printf("\n%sString %d (offset %d): %s", indent2, arg->type,
 			arg->string.offset, arg->string.string);
 		break;
 	case TEP_PRINT_DYNAMIC_ARRAY:

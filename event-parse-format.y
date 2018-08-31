@@ -19,6 +19,7 @@ void parse_atom_print_param(struct tep_format_parser_context *context, char *par
 void parse_flags_print_param(struct tep_format_parser_context *context);
 void parse_symbol_print_param(struct tep_format_parser_context *context);
 void parse_typecast_print_param(struct tep_format_parser_context *context, char *type);
+void parse_strfunc_print_param(struct tep_format_parser_context *context, char *string);
 
 %}
 %define parse.error verbose
@@ -124,8 +125,9 @@ print:
 				parser_debug(" Got param flags func \n");
 				parse_flags_print_param(context);
 			   }
-	| PARAM_STR_FUNC {
-				parser_debug(" Got param string func \n");
+	| PARAM_STR_FUNC STRING_PRINT {
+				parser_debug(" Got param string %s \n", $2);
+				parse_strfunc_print_param(context, $2);
 			 }
 	| PARAM_SYMB_FUNC {
 				parser_debug(" Got param symbolic func \n");
