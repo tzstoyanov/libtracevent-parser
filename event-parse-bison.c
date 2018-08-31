@@ -254,38 +254,29 @@ struct tep_print_arg *parse_print_stack_try_pop(struct tep_format_parser_context
 	if (context->stack && context->stack->arg) {
 		switch (context->stack->arg->type) {
 		case TEP_PRINT_OP:
-			if (context->stack->arg->op.right) {
+			if (context->stack->arg->op.right)
 				arg = parse_print_stack_pop(context);
-				if(arg) {
-					*context->args = context->current_arg;
-					context->args = &context->current_arg->next;
-					context->current_arg = arg_current;
-				}
-			}
 			break;
 		case TEP_PRINT_FLAGS:
-			if (context->stack->arg->flags.field) {
+			if (context->stack->arg->flags.field)
 				arg = parse_print_stack_pop(context);
-				if(arg) {
-					*context->args = context->current_arg;
-					context->args = &context->current_arg->next;
-					context->current_arg = arg_current;
-				}
-			}
 			break;
 		case TEP_PRINT_SYMBOL:
-			if (context->stack->arg->symbol.field) {
+			if (context->stack->arg->symbol.field)
 				arg = parse_print_stack_pop(context);
-				if(arg) {
-					*context->args = context->current_arg;
-					context->args = &context->current_arg->next;
-					context->current_arg = arg_current;
-				}
-			}
+			break;
+		case TEP_PRINT_TYPE:
+			if (context->stack->arg->typecast.item)
+				arg = parse_print_stack_pop(context);
 			break;
 		default:
 			break;
 		}
+	}
+	if (arg) {
+		*context->args = context->current_arg;
+		context->args = &context->current_arg->next;
+		context->current_arg = arg_current;
 	}
 	return arg;
 }
@@ -327,6 +318,13 @@ void parse_print_getnext_arg(struct tep_format_parser_context *context)
 				pushed = true;
 				parse_print_stack_push(context, context->current_arg);
 				context->args = &context->current_arg->symbol.field;
+			}
+			break;
+		case TEP_PRINT_TYPE:
+			if(!context->current_arg->typecast.item) {
+				pushed = true;
+				parse_print_stack_push(context, context->current_arg);
+				context->args = &context->current_arg->typecast.item;
 			}
 			break;
 		default:
@@ -402,6 +400,12 @@ void parse_symbol_print_param(struct tep_format_parser_context *context)
 	context->flags = &flags->symbol.symbols;
 }
 
+void parse_typecast_print_param(struct tep_format_parser_context *context, char *type)
+{
+	parse_new_print_param(context, TEP_PRINT_TYPE);
+	context->current_arg->typecast.type = type;
+}
+
 #define REC_PREFIX	"REC->"
 void parse_field_print_param(struct tep_format_parser_context *context, char *param)
 {
@@ -416,7 +420,8 @@ void parse_field_print_param(struct tep_format_parser_context *context, char *pa
 		context->current_arg->field.name =
 			realloc(context->current_arg->field.name,
 				strlen(param)+
-				strlen(context->current_arg->field.name)+1);
+				strlen(context->current_arg->field.name)+2);
+		strcat(context->current_arg->field.name, " ");
 		strcat(context->current_arg->field.name, param);
 		free(param);
 	} else {

@@ -13,6 +13,7 @@ extern int yylex(struct tep_format_parser_context *context);
 %x PRINT_PARAMS
 %x PRINT_PARAMS_FUNC
 %x PRINT_PARAMS_FUNC_CURLY
+%x PRINT_PARAMS_TYPECAST
 %%
 name\:				{ return EVENT_NAME; }
 ID\:				{ return EVENT_ID; }
@@ -116,8 +117,16 @@ format\:			{ BEGIN(FORMAT_START); return FORMAT; }
 				    return PARAM_ARG_FUNC; 
 				  }
 <PRINT_PARAMS>\(		{ 
+				 yylval.sval = strdup(yytext);
+				 BEGIN(PRINT_PARAMS_TYPECAST);  
+				 return PARAM_TYPE; 
+				}
+<PRINT_PARAMS_TYPECAST>[^\)]*	{ 
 				 yylval.sval = strdup(yytext); 
-				 return STRING_PARAM; 
+				 return STRING_PRINT; 
+				}
+<PRINT_PARAMS_TYPECAST>\) 	{ 
+			  		BEGIN(PRINT_PARAMS); 
 				}
 <PRINT_PARAMS_FUNC>\{		{ 
 					BEGIN(PRINT_PARAMS_FUNC_CURLY); 

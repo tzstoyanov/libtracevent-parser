@@ -284,7 +284,7 @@ void events_print_fmt_arg(char *indent, struct tep_print_arg *arg)
 	case TEP_PRINT_TYPE:
 		printf("\n%sTypecast type %s, items:",
 				indent2, arg->typecast.type);
-
+		events_print_fmt_args_all(indent2, arg->typecast.item);
 		break;
 	case TEP_PRINT_STRING:
 	case TEP_PRINT_BSTRING:

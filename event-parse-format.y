@@ -18,7 +18,7 @@ void parse_func_end_file(struct tep_format_parser_context *context);
 void parse_atom_print_param(struct tep_format_parser_context *context, char *param);
 void parse_flags_print_param(struct tep_format_parser_context *context);
 void parse_symbol_print_param(struct tep_format_parser_context *context);
-
+void parse_typecast_print_param(struct tep_format_parser_context *context, char *type);
 
 %}
 %define parse.error verbose
@@ -52,7 +52,7 @@ void parse_symbol_print_param(struct tep_format_parser_context *context);
 %token PARAM_STR_FUNC PARAM_SYMB_FUNC PARAM_HEX_FUNC PARAM_HEXSTR_FUNC
 %token PARAM_FLAGS_FUNC PARAM_ARRAY_FUNC PARAM_BITMASK_FUNC 
 %token PARAM_DARRAY_FUNC PARAM_DARRAYLEN_FUNC
-%token FILE_END
+%token PARAM_TYPE FILE_END
 %%
 event:
 	name id format fields prints
@@ -172,6 +172,10 @@ print:
 	| PARAM_FUNC_END { 
 				parser_debug("Func END\n");
 				parse_func_end_param(context); 
+			}
+	| PARAM_TYPE STRING_PRINT { 
+			  parser_debug("Got TYPECAST %s\n", $2); 
+			  parse_typecast_print_param(context, $2);				
 			}
 	| ENDL { parser_debug("\n"); }
 	| FILE_END { 
