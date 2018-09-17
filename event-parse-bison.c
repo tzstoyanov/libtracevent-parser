@@ -241,16 +241,42 @@ struct tep_print_arg *parse_print_stack_pop(struct tep_format_parser_context *co
 		context->stack = stack->next;
 		context->args = stack->args;
 		context->current_arg = stack->arg;
+		context->arg_completed = 1;
 		arg = stack->arg;
 		free(stack);
 	}
 	return  arg;
 }
 
+void parse_print_func_params_set(struct tep_print_arg *func) {
+	if (!func)
+		return;
+	switch(func->type) {
+	case TEP_PRINT_HEX:
+	case TEP_PRINT_HEX_STR:
+		if(func->hex.field) {
+			func->hex.size = func->hex.field->next;
+			func->hex.field->next = NULL;
+		}
+		break;
+	case TEP_PRINT_INT_ARRAY:
+		if(func->int_array.field) {
+			func->int_array.count = func->int_array.field->next;
+			func->int_array.field->next = NULL;
+		}
+		if(func->int_array.count) {
+			func->int_array.el_size = func->int_array.count->next;
+			func->int_array.count->next = NULL;
+		}
+		break;
+	default:
+		break;
+	}
+}
+
 struct tep_print_arg *parse_print_stack_try_pop(struct tep_format_parser_context *context)
 {
 	struct tep_print_arg *arg = NULL;
-	struct tep_print_arg *arg_current = context->current_arg;
 	if (context->stack && context->stack->arg) {
 		switch (context->stack->arg->type) {
 		case TEP_PRINT_OP:
@@ -269,18 +295,29 @@ struct tep_print_arg *parse_print_stack_try_pop(struct tep_format_parser_context
 			if (context->stack->arg->typecast.item)
 				arg = parse_print_stack_pop(context);
 			break;
+		case TEP_PRINT_HEX:
+		case TEP_PRINT_HEX_STR:
+			if (context->stack->arg->hex.field &&
+			    context->stack->arg->hex.size)
+				arg = parse_print_stack_pop(context);
+			break;
+		case TEP_PRINT_INT_ARRAY:
+			if (context->stack->arg->int_array.field &&
+			    context->stack->arg->int_array.count &&
+			    context->stack->arg->int_array.el_size)
+				arg = parse_print_stack_pop(context);
+			break;
+		case TEP_PRINT_DYNAMIC_ARRAY:
+		case TEP_PRINT_DYNAMIC_ARRAY_LEN:
+			if (context->stack->arg->dynarray.index)
+				arg = parse_print_stack_pop(context);
+			break;
 		default:
 			break;
 		}
 	}
-	if (arg) {
-		*context->args = context->current_arg;
-		context->args = &context->current_arg->next;
-		context->current_arg = arg_current;
-	}
 	return arg;
 }
-
 
 void parse_print_stack_push(struct tep_format_parser_context *context, struct tep_print_arg *arg)
 {
@@ -294,11 +331,12 @@ void parse_print_stack_push(struct tep_format_parser_context *context, struct te
 
 void parse_print_getnext_arg(struct tep_format_parser_context *context)
 {
+	struct tep_print_arg *arg = NULL;
 	bool pushed = false;
 
-	while(parse_print_stack_try_pop(context));
-
-	if (context->current_arg) {
+	do {
+		if(!context->current_arg)
+			break;
 		switch (context->current_arg->type) {
 		case TEP_PRINT_OP:
 			if(!context->current_arg->op.right) {
@@ -321,10 +359,38 @@ void parse_print_getnext_arg(struct tep_format_parser_context *context)
 			}
 			break;
 		case TEP_PRINT_TYPE:
-			if(!context->current_arg->typecast.item) {
+			if(!context->arg_completed) {
+				if(!context->current_arg->typecast.item) {
+					pushed = true;
+					parse_print_stack_push(context, context->current_arg);
+					context->args = &context->current_arg->typecast.item;
+				}
+			} else {
+				context->current_arg->type = TEP_PRINT_FIELD;
+				context->current_arg->field.name = context->current_arg->typecast.type;
+			}
+			break;
+		case TEP_PRINT_HEX:
+		case TEP_PRINT_HEX_STR:
+			if(!context->current_arg->hex.field) {
 				pushed = true;
 				parse_print_stack_push(context, context->current_arg);
-				context->args = &context->current_arg->typecast.item;
+				context->args = &context->current_arg->hex.field;
+			}
+			break;
+		case TEP_PRINT_INT_ARRAY:
+			if(!context->current_arg->int_array.field) {
+				pushed = true;
+				parse_print_stack_push(context, context->current_arg);
+				context->args = &context->current_arg->int_array.field;
+			}
+			break;
+		case TEP_PRINT_DYNAMIC_ARRAY:
+		case TEP_PRINT_DYNAMIC_ARRAY_LEN:
+			if (!context->current_arg->dynarray.index) {
+				pushed = true;
+				parse_print_stack_push(context, context->current_arg);
+				context->args = &context->current_arg->dynarray.index;
 			}
 			break;
 		default:
@@ -334,7 +400,8 @@ void parse_print_getnext_arg(struct tep_format_parser_context *context)
 			*context->args = context->current_arg;
 			context->args = &context->current_arg->next;
 		}
-	}
+	arg = parse_print_stack_try_pop(context);
+	} while (arg);
 }
 
 void parse_new_print_param(struct tep_format_parser_context *context,
@@ -370,14 +437,31 @@ void parse_new_print_param(struct tep_format_parser_context *context,
 
 void parse_func_end_param(struct tep_format_parser_context *context)
 {
+	struct tep_format_parser_stack *stack = context->stack;
+
 	context->arg_completed = 1;
 	*context->args = context->current_arg;
-	parse_print_stack_pop(context);
+	while(stack) {
+		parse_print_func_params_set(stack->arg);
+		stack = stack->next;
+	}
+	parse_print_stack_try_pop(context);
 }
 
 void parse_func_end_file(struct tep_format_parser_context *context)
 {
-	parse_print_getnext_arg(context);
+	struct tep_format_parser_stack *stack = context->stack;
+
+	context->arg_completed = 1;
+	*context->args = context->current_arg;
+	while(stack) {
+		parse_print_func_params_set(stack->arg);
+		stack = stack->next;
+	}
+	while(parse_print_stack_try_pop(context)) {
+		*context->args = context->current_arg;
+		context->args = &context->current_arg->next;
+	}
 }
 
 void parse_flags_print_param(struct tep_format_parser_context *context)
@@ -398,6 +482,31 @@ void parse_symbol_print_param(struct tep_format_parser_context *context)
 
 	flags = context->current_arg;
 	context->flags = &flags->symbol.symbols;
+}
+
+void parse_hex_print_param(struct tep_format_parser_context *context)
+{
+	parse_new_print_param(context, TEP_PRINT_HEX);
+}
+
+void parse_hex_str_print_param(struct tep_format_parser_context *context)
+{
+	parse_new_print_param(context, TEP_PRINT_HEX_STR);
+}
+
+void parse_array_print_param(struct tep_format_parser_context *context)
+{
+	parse_new_print_param(context, TEP_PRINT_INT_ARRAY);
+}
+
+void parse_dynarray_print_param(struct tep_format_parser_context *context)
+{
+	parse_new_print_param(context, TEP_PRINT_DYNAMIC_ARRAY);
+}
+
+void parse_dynarray_len_print_param(struct tep_format_parser_context *context)
+{
+	parse_new_print_param(context, TEP_PRINT_DYNAMIC_ARRAY_LEN);
 }
 
 void parse_typecast_print_param(struct tep_format_parser_context *context, char *type)
@@ -423,6 +532,7 @@ static bool strip_rec_prefix(char *param)
 	}
 	return false;
 }
+
 void parse_field_print_param(struct tep_format_parser_context *context, char *param)
 {
 	parse_new_print_param(context, TEP_PRINT_FIELD);

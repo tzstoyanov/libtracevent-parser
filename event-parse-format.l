@@ -59,60 +59,63 @@ format\:			{ BEGIN(FORMAT_START); return FORMAT; }
 				  		BEGIN(PRINT_PARAMS); 
 				  	 	return PARAM_FUNC_END; 
 				  	} else {
-					  	yylval.sval = strdup(yytext); 
-					  	return STRING_PARAM;
+					  	/*yylval.sval = strdup(yytext); 
+					  	return STRING_PARAM;*/
+				  		/*BEGIN(PRINT_PARAMS);*/ 
+				  	 	return PARAM_FUNC_END; 
+					  	
 					}
 				 }
 				}
 <PRINT_PARAMS,PRINT_PARAMS_FUNC>,[ \t]*	{ return STRING_PARAM_NEW; }
-<PRINT_PARAMS>__print_flags\( 	{ 
-				  context->bracket_count=1;
+<PRINT_PARAMS,PRINT_PARAMS_FUNC>__print_flags[ \t]*\( 	{ 
+				  context->bracket_count++;
 				  BEGIN(PRINT_PARAMS_FUNC);  
 				  return PARAM_FLAGS_FUNC; 
 				 }
-<PRINT_PARAMS>__get_str\( 	{
+<PRINT_PARAMS,PRINT_PARAMS_FUNC>__get_str[ \t]*\( 	{
 				  BEGIN(PRINT_PARAMS_STR_FUNC);  
 				  return PARAM_STR_FUNC; 
 				}
-<PRINT_PARAMS>__print_symbolic\( {
-				  context->bracket_count=1;
+<PRINT_PARAMS,PRINT_PARAMS_FUNC>__print_symbolic[ \t]*\( {
+				  context->bracket_count++;
 				  BEGIN(PRINT_PARAMS_FUNC);  
 				  return PARAM_SYMB_FUNC; 
 				 }
-<PRINT_PARAMS>__print_hex\( 	{
-				  context->bracket_count=1;
+<PRINT_PARAMS,PRINT_PARAMS_FUNC>__print_hex[ \t]*\( 	{
+				  context->bracket_count++;
 				  BEGIN(PRINT_PARAMS_FUNC);  
 				  return PARAM_HEX_FUNC; 
 				 }
-<PRINT_PARAMS>__print_hex_str\( {
-				  context->bracket_count=1;
+<PRINT_PARAMS,PRINT_PARAMS_FUNC>__print_hex_str[ \t]*\( {
+				  context->bracket_count++;
 				  BEGIN(PRINT_PARAMS_FUNC);  
 				  return PARAM_HEXSTR_FUNC; 
 				 }
-<PRINT_PARAMS>__print_array\( 	{
-				  context->bracket_count=1;
+<PRINT_PARAMS,PRINT_PARAMS_FUNC>__print_array[ \t]*\( 	{
+				  context->bracket_count++;
 				  BEGIN(PRINT_PARAMS_FUNC);  
 				  return PARAM_ARRAY_FUNC; 
 				 }
-<PRINT_PARAMS>__get_bitmask\( 	{
+<PRINT_PARAMS,PRINT_PARAMS_FUNC>__get_bitmask[ \t]*\( 	{
 				  context->bracket_count=1;
 				  BEGIN(PRINT_PARAMS_FUNC);  
 				  return PARAM_BITMASK_FUNC; 
 				 }
-<PRINT_PARAMS>__get_dynamic_array\( {
-				  context->bracket_count=1;
+<PRINT_PARAMS,PRINT_PARAMS_FUNC>__get_dynamic_array[ \t]*\( {
+				  context->bracket_count++;
 				  BEGIN(PRINT_PARAMS_FUNC);  
 				  return PARAM_DARRAY_FUNC; 
 				 }
-<PRINT_PARAMS>__get_dynamic_array_len		{
-				  context->bracket_count=1;
+<PRINT_PARAMS,PRINT_PARAMS_FUNC>__get_dynamic_array_len[ \t]*\(	{
+				  context->bracket_count++;
 				  BEGIN(PRINT_PARAMS_FUNC);  
 				  return PARAM_DARRAYLEN_FUNC; 
 				 }
 				 
-<PRINT_PARAMS>[a-zA-Z0-9\_\-]+\( { 
+<PRINT_PARAMS,PRINT_PARAMS_FUNC>[a-zA-Z0-9\_\-]+\( { 
 				    yylval.sval = strdup(yytext); 
-				    context->bracket_count=1;
+				    context->bracket_count++;
 				    BEGIN(PRINT_PARAMS_FUNC);  
 				    return PARAM_ARG_FUNC; 
 				  }
@@ -151,6 +154,10 @@ format\:			{ BEGIN(FORMAT_START); return FORMAT; }
 				      yylval.sval = strdup(yytext); 
 				      return STRING_PARAM_ATOM; 
 				     }
+<PRINT_PARAMS,PRINT_PARAMS_FUNC>[0-9]* { 
+				      yylval.sval = strdup(yytext); 
+				      return STRING_PARAM_ATOM; 
+				     }				     
 <PRINT_PARAMS,PRINT_PARAMS_FUNC>[^,^\n^\r^\(^\)^ ^\t^-^+^\/^&^<^>^=^!^|^?^:]* { 
 				      yylval.sval = strdup(yytext); 
 				      return STRING_PARAM; 

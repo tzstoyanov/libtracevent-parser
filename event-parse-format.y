@@ -20,6 +20,11 @@ void parse_flags_print_param(struct tep_format_parser_context *context);
 void parse_symbol_print_param(struct tep_format_parser_context *context);
 void parse_typecast_print_param(struct tep_format_parser_context *context, char *type);
 void parse_strfunc_print_param(struct tep_format_parser_context *context, char *string);
+void parse_hex_print_param(struct tep_format_parser_context *context);
+void parse_hex_str_print_param(struct tep_format_parser_context *context);
+void parse_array_print_param(struct tep_format_parser_context *context);
+void parse_dynarray_print_param(struct tep_format_parser_context *context);
+void parse_dynarray_len_print_param(struct tep_format_parser_context *context);
 
 %}
 %define parse.error verbose
@@ -134,22 +139,27 @@ print:
 				parse_symbol_print_param(context);
 			 }
 	| PARAM_HEX_FUNC {
-				parser_debug(" Got param hex func \n");
+				parser_debug(" Got param hex func");
+				parse_hex_print_param(context);
 			 }
 	| PARAM_HEXSTR_FUNC {
 				parser_debug(" Got param hex string func \n");
+				parse_hex_str_print_param(context);
 			 }
 	| PARAM_ARRAY_FUNC {
 				parser_debug(" Got param array func \n");
+				parse_array_print_param(context);
 			 }
 	| PARAM_BITMASK_FUNC {
 				parser_debug(" Got param bitmask func \n");
 			 }
 	| PARAM_DARRAY_FUNC {
 				parser_debug(" Got param dynamic array func \n");
+				parse_dynarray_print_param(context);
 			 }
 	| PARAM_DARRAYLEN_FUNC {
 				parser_debug(" Got param dynamic array func \n");
+				parse_dynarray_len_print_param(context);
 			 }
 	| STRING_PARAM_OP {
 				parser_debug(" Got param OP [%s]\n", $1);
