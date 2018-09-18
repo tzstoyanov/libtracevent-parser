@@ -1,5 +1,6 @@
 #!/bin/bash
 BREAK_ON_ERROR=0
+VERBOSE=1
 VERBOSE_ON_ERROR=0
 EVENTS_DIR=/sys/kernel/debug/tracing/events/
 TEST_RESULT=./.test_result
@@ -21,6 +22,9 @@ do
 		if [ $BREAK_ON_ERROR -eq 1 ]; then
 			exit 1
 		fi	
+	fi
+	if [ $VERBOSE -eq 1 ]; then
+		cat $TEST_RESULT
 	fi
 	rm -rf $TEST_RESULT
 done

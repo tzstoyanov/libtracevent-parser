@@ -25,7 +25,8 @@ void parse_hex_str_print_param(struct tep_format_parser_context *context);
 void parse_array_print_param(struct tep_format_parser_context *context);
 void parse_dynarray_print_param(struct tep_format_parser_context *context);
 void parse_dynarray_len_print_param(struct tep_format_parser_context *context);
-
+void parse_func_print_param(struct tep_format_parser_context *context, char *fname);
+void parse_print_param_new(struct tep_format_parser_context *context);
 %}
 %define parse.error verbose
 %parse-param {struct tep_format_parser_context *context}
@@ -125,6 +126,7 @@ print:
 	  			      } 
 	| PARAM_ARG_FUNC { 
 				parser_debug(" Got param func [%s] \n", $1);
+				parse_func_print_param(context, $1);
 			 }
 	| PARAM_FLAGS_FUNC { 
 				parser_debug(" Got param flags func \n");
@@ -166,11 +168,11 @@ print:
 				parse_op_print_param(context, $1);
 			  }
 	| STRING_PRINT { 
-				parser_debug("Got print string: [%s]\n", $1); 
+				parser_debug("Got print string in %d: [%s]\n", context->parse_context, $1); 
 				parse_new_print_str(context, $1); 
 		       }
 	| STRING_PARAM { 
-				parser_debug("Got print param: [%s]\n", $1); 
+				parser_debug("Got print param in %d: [%s]\n", context->parse_context, $1); 
 				parse_field_print_param(context, $1);
 			}
 	| STRING_PARAM_ATOM { 
@@ -179,16 +181,21 @@ print:
 		       }			
 	| STRING_PARAM_NEW { 
 			   	context->arg_completed=1;	
-			   	parser_debug (" param NEW\n"); 
+			   	parser_debug (" param NEW (%d)\n", context->bracket_count); 
+			   	parse_print_param_new(context);
 			   }
 	| PARAM_FUNC_END { 
 				parser_debug("Func END\n");
 				parse_func_end_param(context); 
 			}
 	| PARAM_TYPE STRING_PRINT { 
-			  parser_debug("Got TYPECAST %s\n", $2); 
+			  parser_debug("Got TYPECAST %s (%d)\n", $2, context->bracket_count); 
 			  parse_typecast_print_param(context, $2);				
 			}
+	| PARAM_TYPE PARAM_TYPE { 
+			  parser_debug("Got nested TYPECAST (%d)\n", context->bracket_count); 
+			}
+			
 	| ENDL { parser_debug("\n"); }
 	| FILE_END { 
 			parser_debug("Got EOF\n");

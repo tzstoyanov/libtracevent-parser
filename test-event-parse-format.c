@@ -18,6 +18,18 @@ extern enum tep_errno __tep_parse_format(struct tep_event_format **eventp,
 				  unsigned long size, const char *sys);
 /*
 
+#define INITIAL 0
+#define FORMAT_START 1
+#define FIELD_START 2
+#define INT_PARAM 3
+#define PRINT 4
+#define PRINT_STRING 5
+#define PRINT_PARAMS 6
+#define PRINT_PARAMS_FUNC 7
+#define PRINT_PARAMS_FUNC_CURLY 8
+#define PRINT_PARAMS_TYPECAST 9
+#define PRINT_PARAMS_STR_FUNC 10
+
 struct print_arg {
 	struct print_arg		*next;
 	enum print_arg_type		type;

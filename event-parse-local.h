@@ -98,12 +98,14 @@ struct tep_format_parser_context {
 	int line_num;
 	int blank_line;
 	int bracket_count;
+	int parse_context;
 	struct tep_event_format *parsed;
 	struct tep_print_arg **args;
 	struct tep_format_parser_stack *stack;
 	struct tep_print_arg *current_arg;
 	struct tep_print_flag_sym **flags;
 	int	arg_completed;
+	int	func_completed;
 	struct tep_format_field **current_fields;
 };
 
@@ -133,5 +135,5 @@ struct tep_function_handler {
 void parser_debug(const char *format, ...);
 int count_parsed_fields(struct tep_format_field *fields);
 void parse_new_print_param(struct tep_format_parser_context *context,
-			   enum tep_print_arg_type type);
+			   enum tep_print_arg_type type, bool concat);
 #endif /* _PARSE_EVENTS_INT_H */
