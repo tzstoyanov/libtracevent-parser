@@ -27,6 +27,7 @@ void parse_dynarray_print_param(struct tep_format_parser_context *context);
 void parse_dynarray_len_print_param(struct tep_format_parser_context *context);
 void parse_func_print_param(struct tep_format_parser_context *context, char *fname);
 void parse_print_param_new(struct tep_format_parser_context *context);
+void parse_bitmask_print_param(struct tep_format_parser_context *context, char *bitmask);
 %}
 %define parse.error verbose
 %parse-param {struct tep_format_parser_context *context}
@@ -152,8 +153,9 @@ print:
 				parser_debug(" Got param array func \n");
 				parse_array_print_param(context);
 			 }
-	| PARAM_BITMASK_FUNC {
-				parser_debug(" Got param bitmask func \n");
+	| PARAM_BITMASK_FUNC STRING_PRINT{
+				parser_debug(" Got param bitmask func %s \n", $2);
+				parse_bitmask_print_param(context, $2);
 			 }
 	| PARAM_DARRAY_FUNC {
 				parser_debug(" Got param dynamic array func \n");
@@ -188,12 +190,13 @@ print:
 				parser_debug("Func END\n");
 				parse_func_end_param(context); 
 			}
-	| PARAM_TYPE STRING_PRINT { 
+	| PARAM_TYPE STRING_PARAM { 
 			  parser_debug("Got TYPECAST %s (%d)\n", $2, context->bracket_count); 
 			  parse_typecast_print_param(context, $2);				
 			}
 	| PARAM_TYPE PARAM_TYPE { 
-			  parser_debug("Got nested TYPECAST (%d)\n", context->bracket_count); 
+			  parser_debug("Got nested TYPECAST (%d)\n", context->bracket_count);
+			  parse_typecast_print_param(context, NULL); 
 			}
 			
 	| ENDL { parser_debug("\n"); }

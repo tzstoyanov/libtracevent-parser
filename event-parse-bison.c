@@ -86,7 +86,6 @@ int is_char_operator(char ch)
 	return 0;
 }
 
-
 void parse_new_field(struct tep_format_parser_context *context,
 			    char *field_string, int offset, int size)
 {
@@ -339,11 +338,25 @@ void parse_print_stack_push(struct tep_format_parser_context *context, struct te
 	context->stack = stack;
 }
 
+#define REC_PREFIX	"REC->"
+static bool strip_rec_prefix(char *param)
+{
+	if (!strncmp(REC_PREFIX, param, strlen(REC_PREFIX))) {
+		memmove(param, param+strlen(REC_PREFIX),
+			strlen(param)-strlen(REC_PREFIX));
+		param[strlen(param)-strlen(REC_PREFIX)] = '\0';
+		return true;
+	}
+	return false;
+}
+
+
 void parse_normalise_arg(struct tep_print_arg *arg) {
 	if(TEP_PRINT_TYPE == arg->type &&
 	   NULL == arg->typecast.item) {
 		arg->type = TEP_PRINT_FIELD;
 		arg->field.name = arg->typecast.type;
+		strip_rec_prefix(arg->field.name);
 	}
 }
 
@@ -527,9 +540,17 @@ void parse_dynarray_print_param(struct tep_format_parser_context *context)
 
 void parse_func_print_param(struct tep_format_parser_context *context, char *fname)
 {
+	char *brk;
+
 	parse_new_print_param(context, TEP_PRINT_FUNC, false);
-	context->current_arg->func.func = calloc(1, sizeof(struct tep_function_handler));
-	context->current_arg->func.func->name = fname;
+	brk = strstr(fname, "(");
+	if(brk)
+		*brk='\0';
+	context->current_arg->func.func = find_func_handler(context->pevent, fname);
+	if(!context->current_arg->func.func) {
+		context->current_arg->func.func = calloc(1, sizeof(struct tep_function_handler));
+		context->current_arg->func.func->name = fname;
+	}
 	context->func_completed = 0;
 }
 
@@ -541,7 +562,8 @@ void parse_dynarray_len_print_param(struct tep_format_parser_context *context)
 void parse_typecast_print_param(struct tep_format_parser_context *context, char *type)
 {
 	parse_new_print_param(context, TEP_PRINT_TYPE, false);
-	context->current_arg->typecast.type = type;
+	if(type)
+		context->current_arg->typecast.type = type;
 }
 
 void parse_strfunc_print_param(struct tep_format_parser_context *context, char *string)
@@ -550,16 +572,10 @@ void parse_strfunc_print_param(struct tep_format_parser_context *context, char *
 	context->current_arg->string.string = string;
 }
 
-#define REC_PREFIX	"REC->"
-static bool strip_rec_prefix(char *param)
+void parse_bitmask_print_param(struct tep_format_parser_context *context, char *bitmask)
 {
-	if (!strncmp(REC_PREFIX, param, strlen(REC_PREFIX))) {
-		memmove(param, param+strlen(REC_PREFIX),
-			strlen(param)-strlen(REC_PREFIX));
-		param[strlen(param)-strlen(REC_PREFIX)] = '\0';
-		return true;
-	}
-	return false;
+	parse_new_print_param(context, TEP_PRINT_BITMASK, true);
+	context->current_arg->bitmask.bitmask = bitmask;
 }
 
 void parse_print_param_new(struct tep_format_parser_context *context)
@@ -569,6 +585,13 @@ void parse_print_param_new(struct tep_format_parser_context *context)
 
 void parse_field_print_param(struct tep_format_parser_context *context, char *param)
 {
+	if (context->current_arg &&
+	   TEP_PRINT_TYPE == context->current_arg->type &&
+	   NULL == context->current_arg->typecast.type) {
+		context->current_arg->typecast.type = param;
+		return;
+	}
+
 	parse_new_print_param(context, TEP_PRINT_FIELD, true);
 
 	strip_rec_prefix(param);

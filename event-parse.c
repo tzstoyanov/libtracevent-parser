@@ -2894,7 +2894,7 @@ process_bitmask(struct tep_event_format *event __maybe_unused, struct tep_print_
 	return TEP_EVENT_ERROR;
 }
 
-static struct tep_function_handler *
+struct tep_function_handler *
 find_func_handler(struct tep_handle *pevent, char *func_name)
 {
 	struct tep_function_handler *func;

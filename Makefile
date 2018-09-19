@@ -212,7 +212,7 @@ $(OUTPUT)$(PARSER_FILE).o: \
 test-$(PARSER_FILE):  $(OUTPUT)$(PARSER_FILE)-flex.c \
 	$(OUTPUT)$(PARSER_FILE)-bison.c $(OUTPUT)libtraceevent.a
 	 $(QUIET_LINK)$(CC) test-$(PARSER_FILE).c \
-	 	$(OUTPUT)$(PARSER_FILE)-flex.c $(OUTPUT)$(PARSER_FILE)-bison.c $(OUTPUT)libtraceevent.a -ldl -g -o $@
+	 	$(OUTPUT)$(PARSER_FILE)-flex.c $(OUTPUT)$(PARSER_FILE)-bison.c -L. -ltraceevent -ldl -g -o $@
 
 test-parser: test-$(PARSER_FILE)
 

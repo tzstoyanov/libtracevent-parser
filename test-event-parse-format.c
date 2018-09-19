@@ -153,13 +153,14 @@ char *str_error_r(int errnum, char *buf, size_t buflen)
 	return buf;
 }
 
-void legacy_parser( const char *file_name, struct tep_event_format **event)
+void legacy_parser( const char *file_name,
+		    struct tep_handle *pevent, struct tep_event_format **event)
 {
 	size_t size;
 	char *data;
 
 	filename_read(file_name, &data, &size);
-	__tep_parse_format(event, NULL, data, size, "test");
+	__tep_parse_format(event, pevent, data, size, "test");
 }
 
 int events_format_fields_compare(char *name, struct tep_format_field *format1,
@@ -429,12 +430,13 @@ int main(int argc, char **argv)
 	struct tep_format_parser_context context;
 	struct tep_event_format *event_legacy = NULL;
 	FILE *format_file = fopen(argv[1], "r");
-//	struct tep_handle *pevent = tep_alloc();
+	struct tep_handle *pevent = tep_alloc();
 
 	if (!format_file) {
 		printf("ERROR: Cannot open %s\n", argv[1]);
 		return -1;
 	}
+
 	parser_debug("Opened  %s\n\r", argv[1]);
 	/* Set flex to read from it instead of defaulting to STDIN: */
 	yyin = format_file;
@@ -444,6 +446,9 @@ int main(int argc, char **argv)
 	context.parsed->print_fmt.format = strdup("");
 	context.current_fields = &(context.parsed->format.common_fields);
 	context.args = &(context.parsed->print_fmt.args);
+	context.pevent = pevent;
+	if(!tep_load_plugins(pevent))
+		printf("ERROR loading plugins %d\n", errno);
 	/* Parse through the input: */
 	yyparse(&context);
 
@@ -452,8 +457,7 @@ int main(int argc, char **argv)
 	context.parsed->format.nr_fields =
 			count_parsed_fields(context.parsed->format.fields);
 
-//	tep_load_plugins(pevent);
-	legacy_parser(argv[1], &event_legacy);
+	legacy_parser(argv[1], pevent, &event_legacy);
 	printf("\n\r Legacy:");
 	events_print_fmt_dump(&event_legacy->print_fmt);
 	printf("\n\r New:");

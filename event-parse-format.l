@@ -100,8 +100,8 @@ format\:			{ SET_STATE(FORMAT_START); return FORMAT; }
 				  return PARAM_ARRAY_FUNC; 
 				 }
 <PRINT_PARAMS,PRINT_PARAMS_FUNC>__get_bitmask[ \t]*\( 	{
-				  context->bracket_count=1;
-				  SET_STATE(PRINT_PARAMS_FUNC);  
+				  context->bracket_count++;
+				  SET_STATE(PRINT_PARAMS_STR_FUNC);  
 				  return PARAM_BITMASK_FUNC; 
 				 }
 <PRINT_PARAMS,PRINT_PARAMS_FUNC>__get_dynamic_array[ \t]*\( {
@@ -131,11 +131,11 @@ format\:			{ SET_STATE(FORMAT_START); return FORMAT; }
 				 context->bracket_count++;  
 				 return PARAM_TYPE; 
 				}				
-<PRINT_PARAMS_TYPECAST,PRINT_PARAMS_STR_FUNC>[^\(^\)]* { 
-				 		yylval.sval = strdup(yytext); 
-				 		return STRING_PRINT; 
-					}
-<PRINT_PARAMS_TYPECAST,PRINT_PARAMS_FUNC>\) { 
+<PRINT_PARAMS_STR_FUNC>[^\(^\)]* { 
+				 	yylval.sval = strdup(yytext); 
+				 	return STRING_PRINT; 
+				 }
+<PRINT_PARAMS_TYPECAST,PRINT_PARAMS_FUNC,PRINT_PARAMS_STR_FUNC>\) { 
 			  		if(context->bracket_count > 0) 
 			  			context->bracket_count--;
 		  			if(context->bracket_count == 0) {
@@ -152,6 +152,10 @@ format\:			{ SET_STATE(FORMAT_START); return FORMAT; }
 					return  PRINT_PARAMS_FUNC_CURLY_START;
 				}
 <PRINT_PARAMS,PRINT_PARAMS_FUNC>REC\-\>[a-zA-Z0-9\_\-]+ {
+					yylval.sval = strdup(yytext);
+					return STRING_PARAM;
+				}
+<PRINT_PARAMS_TYPECAST>[a-zA-Z0-9\_\-\>\.]+ {
 					yylval.sval = strdup(yytext);
 					return STRING_PARAM;
 				}
