@@ -427,6 +427,7 @@ int events_compare(struct tep_event_format *event1, struct tep_event_format *eve
 
 int main(int argc, char **argv)
 {
+	int res;
 	struct tep_format_parser_context context;
 	struct tep_event_format *event_legacy = NULL;
 	FILE *format_file = fopen(argv[1], "r");
@@ -463,5 +464,9 @@ int main(int argc, char **argv)
 	printf("\n\r New:");
 	events_print_fmt_dump(&context.parsed->print_fmt);
 
-	return events_compare(context.parsed, event_legacy);
+	res = events_compare(context.parsed, event_legacy);
+	tep_free_format(event_legacy);
+	tep_free_format(context.parsed);
+
+	return res;
 }

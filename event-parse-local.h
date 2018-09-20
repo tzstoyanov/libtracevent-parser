@@ -139,4 +139,6 @@ void parse_new_print_param(struct tep_format_parser_context *context,
 			   enum tep_print_arg_type type, bool concat);
 struct tep_function_handler *
 	find_func_handler(struct tep_handle *pevent, char *func_name);
+void free_args(struct tep_print_arg *args);
+
 #endif /* _PARSE_EVENTS_INT_H */

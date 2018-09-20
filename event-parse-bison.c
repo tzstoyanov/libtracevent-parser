@@ -148,7 +148,6 @@ void parse_new_field(struct tep_format_parser_context *context,
 			}
 		}
 	}
-	new_field->alias = new_field->name;
 
 	if (field_is_string(new_field))
 		new_field->flags |= TEP_FIELD_IS_STRING;
@@ -205,6 +204,10 @@ void parse_new_field(struct tep_format_parser_context *context,
 		}
 	} else
 		new_field->elementsize = new_field->size;
+
+	/* fix for tep_free_format() function */
+	new_field->name = strdup(new_field->name);
+	new_field->alias = new_field->name;
 
 	*context->current_fields = new_field;
 	context->current_fields = &new_field->next;
@@ -339,24 +342,24 @@ void parse_print_stack_push(struct tep_format_parser_context *context, struct te
 }
 
 #define REC_PREFIX	"REC->"
-static bool strip_rec_prefix(char *param)
-{
-	if (!strncmp(REC_PREFIX, param, strlen(REC_PREFIX))) {
-		memmove(param, param+strlen(REC_PREFIX),
-			strlen(param)-strlen(REC_PREFIX));
-		param[strlen(param)-strlen(REC_PREFIX)] = '\0';
-		return true;
-	}
-	return false;
-}
-
-
-void parse_normalise_arg(struct tep_print_arg *arg) {
-	if(TEP_PRINT_TYPE == arg->type &&
+void parse_print_arg_completed(struct tep_format_parser_context *context, struct tep_print_arg *arg) {
+	if (TEP_PRINT_TYPE == arg->type &&
 	   NULL == arg->typecast.item) {
 		arg->type = TEP_PRINT_FIELD;
 		arg->field.name = arg->typecast.type;
-		strip_rec_prefix(arg->field.name);
+	}
+	if (TEP_PRINT_FIELD == arg->type) {
+		if (!strncmp(REC_PREFIX, arg->field.name, strlen(REC_PREFIX))) {
+			memmove(arg->field.name, arg->field.name+strlen(REC_PREFIX),
+				strlen(arg->field.name)-strlen(REC_PREFIX));
+			arg->field.name[strlen(arg->field.name)-strlen(REC_PREFIX)] = '\0';
+		}
+		arg->field.field = tep_find_any_field(context->parsed, arg->field.name);
+	}
+	if (TEP_PRINT_FUNC == arg->type &&
+	    arg->func.args && TEP_PRINT_NULL == arg->func.args->type) {
+		free_args(arg->func.args);
+		arg->func.args = NULL;
 	}
 }
 
@@ -430,7 +433,7 @@ void parse_print_getnext_arg(struct tep_format_parser_context *context)
 			break;
 		}
 		if(!pushed) {
-			parse_normalise_arg(context->current_arg);
+			parse_print_arg_completed(context, context->current_arg);
 			*context->args = context->current_arg;
 			context->args = &context->current_arg->next;
 		}
@@ -474,7 +477,7 @@ void parse_func_flush_stack(struct tep_format_parser_context *context) {
 
 	context->arg_completed = 1;
 	context->func_completed = 1;
-	parse_normalise_arg(context->current_arg);
+	parse_print_arg_completed(context, context->current_arg);
 	*context->args = context->current_arg;
 	while(stack) {
 		parse_print_func_params_set(stack->arg);
@@ -492,7 +495,7 @@ void parse_func_end_file(struct tep_format_parser_context *context)
 {
 	parse_func_flush_stack(context);
 	while(parse_print_stack_try_pop(context)) {
-		parse_normalise_arg(context->current_arg);
+		parse_print_arg_completed(context, context->current_arg);
 		*context->args = context->current_arg;
 		context->args = &context->current_arg->next;
 	}
@@ -594,8 +597,6 @@ void parse_field_print_param(struct tep_format_parser_context *context, char *pa
 
 	parse_new_print_param(context, TEP_PRINT_FIELD, true);
 
-	strip_rec_prefix(param);
-
 	if (context->current_arg->field.name) {
 		context->current_arg->field.name =
 			realloc(context->current_arg->field.name,
@@ -653,7 +654,7 @@ void parse_atom_print_param(struct tep_format_parser_context *context, char *par
 
 void parse_op_print_param(struct tep_format_parser_context *context, char *param)
 {
-	parse_normalise_arg(context->current_arg);
+	parse_print_arg_completed(context, context->current_arg);
 
 	parse_new_print_param(context, TEP_PRINT_OP, true);
 

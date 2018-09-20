@@ -4193,7 +4193,7 @@ out_free:
 	return ret;
 }
 
-static void free_args(struct tep_print_arg *args)
+void free_args(struct tep_print_arg *args)
 {
 	struct tep_print_arg *next;
 
