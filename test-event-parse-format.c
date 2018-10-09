@@ -224,11 +224,16 @@ void events_print_filed( char *indent, struct tep_format_field	*field)
 			field->size, field->arraylen, field->elementsize, field->flags);
 }
 
+void events_print_fmt_args_all(char *indent, struct tep_print_arg *arg);
 
 void events_print_fmt_sym_all(char *ident, struct tep_print_flag_sym *sym)
 {
+	char *indent2 = malloc(strlen(ident)+3);;
+	sprintf(indent2, "%s\t", ident);
 	while(sym) {
 		printf("\n%s val: %s, ster: %s", ident, sym->value, sym->str);
+		if(sym->value_arg)
+			events_print_fmt_args_all(indent2, sym->value_arg);
 		sym = sym->next;
 	}
 }
@@ -248,8 +253,6 @@ void events_print_fmt_func_handl(char *ident, struct tep_function_handler *fhand
 		fhandl = fhandl->next;
 	}
 }
-
-void events_print_fmt_args_all(char *indent, struct tep_print_arg *arg);
 
 void events_print_fmt_arg(char *indent, struct tep_print_arg *arg)
 {

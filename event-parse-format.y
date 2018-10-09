@@ -11,14 +11,15 @@ void parser_debug(const char *format, ...);
 void parse_field_print_param(struct tep_format_parser_context *context, char *param);
 void parse_op_print_param(struct tep_format_parser_context *context, char *param);
 void parse_print_stack_pop(struct tep_format_parser_context *context);
-void parse_flag_print_param(struct tep_format_parser_context *context,
-			    char *value, char *name);
+void parse_flag_print_param_new(struct tep_format_parser_context *context);
+void parse_flag_print_param_end(struct tep_format_parser_context *context);
 void parse_func_end_param(struct tep_format_parser_context *context);
 void parse_func_end_file(struct tep_format_parser_context *context);
 void parse_atom_print_param(struct tep_format_parser_context *context, char *param);
 void parse_flags_print_param(struct tep_format_parser_context *context);
 void parse_symbol_print_param(struct tep_format_parser_context *context);
-void parse_typecast_print_param(struct tep_format_parser_context *context, char *type);
+void parse_bracket_open_print_param(struct tep_format_parser_context *context);
+void parse_bracket_close_print_param(struct tep_format_parser_context *context);
 void parse_strfunc_print_param(struct tep_format_parser_context *context, char *string);
 void parse_hex_print_param(struct tep_format_parser_context *context);
 void parse_hex_str_print_param(struct tep_format_parser_context *context);
@@ -60,7 +61,7 @@ void parse_bitmask_print_param(struct tep_format_parser_context *context, char *
 %token PARAM_STR_FUNC PARAM_SYMB_FUNC PARAM_HEX_FUNC PARAM_HEXSTR_FUNC
 %token PARAM_FLAGS_FUNC PARAM_ARRAY_FUNC PARAM_BITMASK_FUNC 
 %token PARAM_DARRAY_FUNC PARAM_DARRAYLEN_FUNC
-%token PARAM_TYPE FILE_END
+%token PARAM_BRACKET_OPEN PARAM_BRACKET_CLOSE FILE_END
 %%
 event:
 	name id format fields prints
@@ -118,13 +119,14 @@ prints:
 print:
 	PRINT_FMT PRINT_STRING_START
 	| PRINT_PARAM_START
-	| PRINT_PARAMS_FUNC_CURLY_START 
-	  STRING_PARAM STRING_PARAM 
-	  PRINT_PARAMS_FUNC_CURLY_END {
-	  				parser_debug("Got curly pair [%s],[%s]\n", 
-	  					     $2, $3);
-	  				parse_flag_print_param(context, $2, $3);
+	| PRINT_PARAMS_FUNC_CURLY_START {
+	  				parser_debug("Got curly pair start\n");
+	  				parse_flag_print_param_new(context);
 	  			      } 
+	| PRINT_PARAMS_FUNC_CURLY_END {
+				parser_debug("Got curly pair end \n");
+				parse_flag_print_param_end(context);
+				}
 	| PARAM_ARG_FUNC { 
 				parser_debug(" Got param func [%s] \n", $1);
 				parse_func_print_param(context, $1);
@@ -190,15 +192,14 @@ print:
 				parser_debug("Func END\n");
 				parse_func_end_param(context); 
 			}
-	| PARAM_TYPE STRING_PARAM { 
-			  parser_debug("Got TYPECAST %s (%d)\n", $2, context->bracket_count); 
-			  parse_typecast_print_param(context, $2);				
-			}
-	| PARAM_TYPE PARAM_TYPE { 
-			  parser_debug("Got nested TYPECAST (%d)\n", context->bracket_count);
-			  parse_typecast_print_param(context, NULL); 
-			}
-			
+	| PARAM_BRACKET_OPEN {
+		  parser_debug("Got \"(\" (%d)\n", context->bracket_count); 
+		  parse_bracket_open_print_param(context);				
+		}
+	| PARAM_BRACKET_CLOSE {
+		  parser_debug("Got \")\" (%d)\n", context->bracket_count);
+		  parse_bracket_close_print_param(context);				
+		}		
 	| ENDL { parser_debug("\n"); }
 	| FILE_END { 
 			parser_debug("Got EOF\n");

@@ -15,7 +15,6 @@ extern int yylex(struct tep_format_parser_context *context);
 %x PRINT_PARAMS
 %x PRINT_PARAMS_FUNC
 %x PRINT_PARAMS_FUNC_CURLY
-%x PRINT_PARAMS_TYPECAST
 %x PRINT_PARAMS_STR_FUNC
 %%
 name\:				{ return EVENT_NAME; }
@@ -40,11 +39,6 @@ format\:			{ SET_STATE(FORMAT_START); return FORMAT; }
 <*>print[ \t]fmt\:[ \t]		{ SET_STATE(PRINT); return PRINT_FMT; }
 <INITIAL>[0-9]+			{ yylval.ival = atoi(yytext); return INT; }
 <INITIAL>[a-zA-Z0-9\_]+		{ yylval.sval = strdup(yytext); return STRING; }
-<PRINT_PARAMS_FUNC>[ \t\[\],]+\( { 
-				   context->bracket_count++; 
-				   yylval.sval = strdup(yytext); 
-				   return STRING_PARAM; 
-				 }
 <FORMAT_START>[a-zA-Z0-9\_\:]+	{ 
 				  yylval.sval = strdup(yytext); 
 				  return FIELD_UKNOWN; 
@@ -52,23 +46,6 @@ format\:			{ SET_STATE(FORMAT_START); return FORMAT; }
 <*>\n				{  context->line_num++;  return ENDL; }
 <PRINT>\"			{ SET_STATE(PRINT_STRING); return PRINT_STRING_START; }
 <PRINT_STRING>\",		{ SET_STATE(PRINT_PARAMS); return PRINT_PARAM_START; }
-<PRINT_PARAMS_FUNC>\)		{ 
-				  if(context->bracket_count > 0)
-				  {
-				  	context->bracket_count--;
-				  	if(!context->bracket_count)
-				  	{
-				  		SET_STATE(PRINT_PARAMS); 
-				  	 	return PARAM_FUNC_END; 
-				  	} else {
-					  	/*yylval.sval = strdup(yytext); 
-					  	return STRING_PARAM;*/
-				  		/*SET_STATE(PRINT_PARAMS);*/ 
-				  	 	return PARAM_FUNC_END; 
-					  	
-					}
-				 }
-				}
 <PRINT_PARAMS,PRINT_PARAMS_FUNC>,[ \t]*	{ return STRING_PARAM_NEW; }
 <PRINT_PARAMS,PRINT_PARAMS_FUNC>__print_flags[ \t]*\( 	{ 
 				  context->bracket_count++;
@@ -121,21 +98,15 @@ format\:			{ SET_STATE(FORMAT_START); return FORMAT; }
 				    SET_STATE(PRINT_PARAMS_FUNC);  
 				    return PARAM_ARG_FUNC; 
 				  }
-<PRINT_PARAMS,PRINT_PARAMS_FUNC>\(	{ 
-				 SET_STATE(PRINT_PARAMS_TYPECAST);  
+<PRINT_PARAMS,PRINT_PARAMS_FUNC>[ \t]*\(	{ 
 				 context->bracket_count++;
-				 return PARAM_TYPE; 
+				 return PARAM_BRACKET_OPEN; 
 				}
-<PRINT_PARAMS_TYPECAST>\(	{ 
-				 SET_STATE(PRINT_PARAMS_TYPECAST);
-				 context->bracket_count++;  
-				 return PARAM_TYPE; 
-				}				
 <PRINT_PARAMS_STR_FUNC>[^\(^\)]* { 
 				 	yylval.sval = strdup(yytext); 
 				 	return STRING_PRINT; 
 				 }
-<PRINT_PARAMS_TYPECAST,PRINT_PARAMS_FUNC,PRINT_PARAMS_STR_FUNC>\) { 
+<PRINT_PARAMS_FUNC,PRINT_PARAMS_STR_FUNC,PRINT_PARAMS>\) { 
 			  		if(context->bracket_count > 0) 
 			  			context->bracket_count--;
 		  			if(context->bracket_count == 0) {
@@ -146,24 +117,20 @@ format\:			{ SET_STATE(FORMAT_START); return FORMAT; }
 		  			} else {
 		  				SET_STATE(PRINT_PARAMS_FUNC);
 		  			}
-				}
-<PRINT_PARAMS_FUNC>\{		{ 
-					SET_STATE(PRINT_PARAMS_FUNC_CURLY); 
-					return  PRINT_PARAMS_FUNC_CURLY_START;
+		  			return PARAM_BRACKET_CLOSE;
 				}
 <PRINT_PARAMS,PRINT_PARAMS_FUNC>REC\-\>[a-zA-Z0-9\_\-]+ {
 					yylval.sval = strdup(yytext);
 					return STRING_PARAM;
 				}
-<PRINT_PARAMS_TYPECAST>[a-zA-Z0-9\_\-\>\.]+ {
-					yylval.sval = strdup(yytext);
-					return STRING_PARAM;
+<PRINT_PARAMS_FUNC>\{		{ 
+					return  PRINT_PARAMS_FUNC_CURLY_START;
 				}
 <PRINT_PARAMS_FUNC_CURLY>[^,^\}]+ {
 				   yylval.sval = strdup(yytext); 
 				   return STRING_PARAM;
 				 }
-<PRINT_PARAMS_FUNC_CURLY>\}	{ 
+<PRINT_PARAMS_FUNC>\}	{ 
 					SET_STATE(PRINT_PARAMS_FUNC);
 					return  PRINT_PARAMS_FUNC_CURLY_END;
 				}
@@ -179,11 +146,39 @@ format\:			{ SET_STATE(FORMAT_START); return FORMAT; }
 				      yylval.sval = strdup(yytext); 
 				      return STRING_PARAM_ATOM; 
 				     }				     
-<PRINT_PARAMS,PRINT_PARAMS_FUNC>[^,^\n^\r^\(^\)^ ^\t^-^+^\/^&^<^>^=^!^|^?^:]* { 
+<PRINT_PARAMS,PRINT_PARAMS_FUNC>[^,^\n^\r^\(^\)^ ^\t^-^+^\/^&^<^>^=^!^|^?^:^~^\{^\}]* { 
 				      yylval.sval = strdup(yytext); 
 				      return STRING_PARAM; 
 				     }
-<PRINT_PARAMS,PRINT_PARAMS_FUNC>[+\/&<>=!|?:]+ {
+<PRINT_PARAMS,PRINT_PARAMS_FUNC>\+\+ {
+					yylval.sval = strdup(yytext); 
+					return STRING_PARAM_OP; 
+				}
+<PRINT_PARAMS,PRINT_PARAMS_FUNC>\-\- {
+					yylval.sval = strdup(yytext); 
+					return STRING_PARAM_OP; 
+				}
+<PRINT_PARAMS,PRINT_PARAMS_FUNC>\<\< {
+					yylval.sval = strdup(yytext); 
+					return STRING_PARAM_OP; 
+				}
+<PRINT_PARAMS,PRINT_PARAMS_FUNC>\>\> {
+					yylval.sval = strdup(yytext); 
+					return STRING_PARAM_OP; 
+				}
+<PRINT_PARAMS,PRINT_PARAMS_FUNC>[<>=!][=] {
+					yylval.sval = strdup(yytext); 
+					return STRING_PARAM_OP; 
+				}
+<PRINT_PARAMS,PRINT_PARAMS_FUNC>\&\& {
+					yylval.sval = strdup(yytext); 
+					return STRING_PARAM_OP; 
+				}
+<PRINT_PARAMS,PRINT_PARAMS_FUNC>\|\| {
+					yylval.sval = strdup(yytext); 
+					return STRING_PARAM_OP; 
+				}
+<PRINT_PARAMS,PRINT_PARAMS_FUNC>[+\/&<>=!|?:~\-] {
 					yylval.sval = strdup(yytext); 
 					return STRING_PARAM_OP; 
 				}

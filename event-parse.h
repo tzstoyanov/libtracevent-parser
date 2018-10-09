@@ -182,6 +182,7 @@ struct tep_print_arg_field {
 
 struct tep_print_flag_sym {
 	struct tep_print_flag_sym	*next;
+	struct tep_print_arg		*value_arg;
 	char				*value;
 	char				*str;
 };
@@ -195,6 +196,7 @@ struct tep_print_arg_flags {
 	struct tep_print_arg		*field;
 	char				*delim;
 	struct tep_print_flag_sym	*flags;
+	bool completed;
 };
 
 struct tep_print_arg_symbol {
@@ -577,6 +579,7 @@ struct tep_handle *tep_alloc(void);
 void tep_free(struct tep_handle *pevent);
 void tep_ref(struct tep_handle *pevent);
 void tep_unref(struct tep_handle *pevent);
+int tep_ref_get(struct tep_handle *pevent);
 
 /* access to the internal parser */
 void tep_buffer_init(const char *buf, unsigned long long size);

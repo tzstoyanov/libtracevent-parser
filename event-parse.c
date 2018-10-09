@@ -1848,7 +1848,7 @@ static int get_op_prio(char *op)
 	}
 }
 
-static int set_op_prio(struct tep_print_arg *arg)
+int set_op_prio(struct tep_print_arg *arg)
 {
 
 	/* single ops are the greatest */
@@ -2436,6 +2436,8 @@ static char *arg_eval (struct tep_print_arg *arg)
 	return NULL;
 }
 
+void events_print_fmt_args_all(char *indent, struct tep_print_arg *arg);
+
 static enum tep_event_type
 process_fields(struct tep_event_format *event, struct tep_print_flag_sym **list, char **tok)
 {
@@ -2471,7 +2473,11 @@ process_fields(struct tep_event_format *event, struct tep_print_flag_sym **list,
 		if (!field)
 			goto out_free;
 
+		printf("process_fields:\n");
+		events_print_fmt_args_all("\t", arg);
 		value = arg_eval(arg);
+		printf("\nprocess_fields val: %s\n", value);
+
 		if (value == NULL)
 			goto out_free_field;
 		field->value = strdup(value);
@@ -6749,6 +6755,13 @@ struct tep_handle *tep_alloc(void)
 void tep_ref(struct tep_handle *pevent)
 {
 	pevent->ref_count++;
+}
+
+int tep_ref_get(struct tep_handle *pevent)
+{
+	if (pevent)
+		return pevent->ref_count;
+	return 0;
 }
 
 void tep_free_format_field(struct tep_format_field *field)

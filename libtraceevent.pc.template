@@ -1,0 +1,10 @@
+prefix=INSTALL_PREFIX
+libdir=${prefix}/lib64
+includedir=${prefix}/include/traceevent
+
+Name: libtraceevent
+URL: https://git.kernel.org/pub/scm/linux/kernel/git/rostedt/trace-cmd.git/about/
+Description: traceevent library
+Version: LIB_VERSION
+Cflags: -I${includedir}
+Libs: -L${libdir} -ltraceevent
